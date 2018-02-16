@@ -166,9 +166,9 @@ MyTrain <- ovun.sample(y ~ ., data = MyTrain, method = "both",N = 40000, p=0.5, 
 # MyTrain <- ovun.sample(y ~ ., data = MyTrain, method = "both",N = 30000,  p=0.5,seed=1)$data
 # cut train and validation data
 MyTrain <- MyTrain[sample(1:nrow(MyData)),]
-MyValidation <- MyTrain[35000:40000,]
-MyValidation <- MyValidation[MyValidation$y %in% c("yes","no"),]
-MyTrain <-MyTrain[1:35000,]
+# MyValidation <- MyTrain[35000:40000,]
+# MyValidation <- MyValidation[MyValidation$y %in% c("yes","no"),]
+# MyTrain <-MyTrain[1:35000,]
 MyTrain <- MyTrain[MyTrain$y %in% c("yes","no"),]
 
 # class example for checking against a known calculation
@@ -199,7 +199,7 @@ for (i in 1:fold){
   # traning
   bankNode = rootNode(bank)
   tree <- Node$new(bankNode)
-  TrainID3(tree, learn,100,0.90)
+  TrainID3(tree, learn,10,0.90)
   # validation
   result <- rep(0,nrow(x.valid))
   for(row in 1:nrow(x.valid)){
@@ -207,6 +207,16 @@ for (i in 1:fold){
   }
   error[i] <- mean(result!=y.valid)
 }
+print(error[i])
+# test
+# the test data is not over sampling
+MyTest.x <- MyTest[,-ncol(MyTest)]
+MyTest.y <- MyTest[,ncol(MyTest)]
+result.test <- rep(0,nrow(MyTest.x))
+for(row in 1:nrow(MyTest.x)){
+  result.test[row]  <-  Predict(tree,MyTest.x[row,])
+}
+error.test <- mean(result.test!=MyTest.y)
 
 
 
