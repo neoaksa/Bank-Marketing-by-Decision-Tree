@@ -177,15 +177,9 @@ forecast = c('sunny','sunny','cloudy','rainy','rainy','rainy','sunny','sunny','s
 oracle = c('yes','no','yes','yes','no','no','no','yes','yes','no','yes','yes','yes','no')
 example = data.frame(wind, water, air, forecast, oracle)
 
-ig <- sapply(colnames(MyTrain)[-ncol(MyTrain)], 
-             function(x) InformationGain(
-               table(MyTrain[,x], MyTrain[,ncol(MyTrain)])
-             )
-)
-feature <- names(ig)[ig == max(ig)][1]
 
-
-tree <- rootNode(startNode)
+bankNode = rootNode(bank)
+tree <- Node$new(bankNode)
 TrainID3(tree, MyTrain,500,0.80)
 print(tree, "feature", "obsCount","purity")
  #Prune(tree, function(x) x$obsCount> 200)
