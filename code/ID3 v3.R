@@ -62,6 +62,7 @@ rootNode = function(data){
 # train model
 TrainID3 <- function(node, data, thredhold, purity) {
   node$obsCount <- nrow(data)
+  # set the purity to nodes
   node$purity <- predict.outcome(data[,ncol(data)])$margin
   #if the data-set is pure, then
   if (IsPure(data)) {
@@ -109,10 +110,11 @@ TrainID3 <- function(node, data, thredhold, purity) {
 
 # prediction
 Predict <- function(tree, features) {
-  if (tree$children[[1]]$isLeaf) 
-    print("x")
-    return (tree$children[[1]]$name)
+  if (tree$children[[1]]$isLeaf) {
+    return (tree$children[[1]]$name)}
   child <- tree$children[[as.character(features[tree$feature][[1]])]]
+  if(is.null(child)){
+    return ("unknow")}
   return ( Predict(child, features))
 }
 
@@ -177,20 +179,37 @@ forecast = c('sunny','sunny','cloudy','rainy','rainy','rainy','sunny','sunny','s
 oracle = c('yes','no','yes','yes','no','no','no','yes','yes','no','yes','yes','yes','no')
 example = data.frame(wind, water, air, forecast, oracle)
 
-
-bankNode = rootNode(bank)
-tree <- Node$new(bankNode)
-TrainID3(tree, MyTrain,500,0.80)
-print(tree, "feature", "obsCount","purity")
+# cross-validation
+library(caret)
+# print(tree, "feature", "obsCount","purity")
  #Prune(tree, function(x) x$obsCount> 200)
 #plot(tree)
-
-# cross-validation
-MyValidation.x <- MyValidation[,-ncol(MyValidation)]
-MyValidation.y <- MyValidation[,ncol(MyValidation)]
-result <- rep(0,nrow(MyValidation))
-for(row in 1:nrow(MyValidation.x)){
-  result[row] <-  Predict(tree,MyValidation.x[row,])
+# split y,x
+set.seed(1)
+# set fold 10
+fold = 10
+idx <- createFolds(c(1:dim(MyTrain)[1]), k=fold)
+error <- rep(0,fold)
+# k fold
+for (i in 1:fold){
+  # split training and validation data
+  learn    <- MyTrain[-idx[[i]], ]
+  x.valid    <- MyTrain[idx[[i]], ]
+  y.valid    <- MyTrain[idx[[i]], ]
+  # traning
+  bankNode = rootNode(bank)
+  tree <- Node$new(bankNode)
+  TrainID3(tree, learn,100,0.90)
+  # validation
+  result <- rep(0,nrow(x.valid))
+  for(row in 1:nrow(x.valid)){
+    result[row]  <-  Predict(tree,x.valid[row,])
+  }
+  error[i] <- mean(result!=y.valid)
 }
+
+
+
+
 
 
