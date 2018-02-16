@@ -48,7 +48,16 @@ predict.outcome <- function(outcome.vector){
   return(list('predict' = names(outcome.counts)[max.index][1],
               'margin'  = max(outcome.counts)))
 }
-
+# find the initial node
+rootNode = function(data){
+  ig <- sapply(colnames(data)[-ncol(data)], 
+               function(x) InformationGain(
+                 table(data[,x], data[,ncol(data)])
+               )
+  )
+  feature <- names(ig)[ig == max(ig)][1]
+  return(feature)
+}
 
 # train model
 TrainID3 <- function(node, data, thredhold, purity) {
@@ -175,8 +184,8 @@ ig <- sapply(colnames(MyTrain)[-ncol(MyTrain)],
 )
 feature <- names(ig)[ig == max(ig)][1]
 
-startNode <- feature
-tree <- Node$new(startNode)
+
+tree <- rootNode(startNode)
 TrainID3(tree, MyTrain,500,0.80)
 print(tree, "feature", "obsCount","purity")
  #Prune(tree, function(x) x$obsCount> 200)
