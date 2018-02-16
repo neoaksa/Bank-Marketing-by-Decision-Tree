@@ -207,7 +207,7 @@ for (i in 1:fold){
   }
   error[i] <- mean(result!=y.valid)
 }
-print(error[i])
+print(error)
 # test
 # the test data is not over sampling
 MyTest.x <- MyTest[,-ncol(MyTest)]
