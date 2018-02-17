@@ -1,9 +1,10 @@
 
 # this downloads and unzips the dataset
-temp <- tempfile()
-download.file("http://archive.ics.uci.edu/ml/machine-learning-databases/00222/bank.zip",temp, mode="wb")
-unzip(temp, "bank-full.csv")
-unlink(temp)
+# temp <- tempfile()
+# download.file("http://archive.ics.uci.edu/ml/machine-learning-databases/00222/bank.zip",temp, mode="wb")
+# unzip(temp, "bank-full.csv")
+# unlink(temp)
+setwd("~/taoj@mail.gvsu.edu/gvsu/course/CIS678/Bank Marketing by Decision Tree/data/bank")
 bank <- read.table("bank-full.csv", sep=";", header=T)
 
 library(data.tree)
@@ -118,6 +119,35 @@ Predict <- function(tree, features) {
   return ( Predict(child, features))
 }
 
+# automatic bin
+binconti <- function(df, conti.name, class.name){
+  subdf <- df[,c(conti.name,class.name)]
+  # sort by continus numbers ascedently
+  subdf <- subdf[order(subdf[,conti.name],subdf[,class.name]),]
+  # find the split point
+  temp <- subdf[1, class.name] # save previous point
+  enthropy.orgi <- Entropy(table(subdf[,class.name]))
+  rownum <- nrow(subdf)
+  # record gain and split point
+  gain <- NULL
+  splitpoint <- NULL
+  for(i in 2: rownum){
+    if(temp != subdf[i, class.name]){
+      # calculate inforgain
+      enthropy1 <- Entropy(table(subdf[1:i-1,class.name]))
+      enthropy2 <- Entropy(table(subdf[i:rownum,class.name]))
+      gain <- append(gain,enthropy.orgi - ((i-1)/rownum)*enthropy1 - ((rownum-i+1)/rownum)*enthropy2)
+      splitpoint <- append(splitpoint, subdf[i,conti.name])
+      temp <- subdf[i,class.name] # change to new class
+    }
+  }
+  point <- cbind(splitpoint, gain)
+  # renturn points with maximun gain
+  # point <- point[order(point[,2],decreasing = TRUE),]
+  # return (point[1:category.num,])
+  return (point)
+  
+}
 
 # start to prepare date
 #bank <- read.table("bank-full.csv", sep=";", header=T)
@@ -127,16 +157,21 @@ Predict <- function(tree, features) {
 
 # bank$age <- cut(bank$age, breaks=c(-Inf, 20,30, 40,50,60,Inf), 
 #                 labels=c("~20","21~30","31~40","41~50","51~60","6~"))
-bank$age <- cut(bank$age, breaks=c(-Inf, 30,55,Inf), 
-                labels=c("~30","31~60","55~"))
+# bank$age <- cut(bank$age, breaks=c(-Inf, 30,55,Inf), 
+#                 labels=c("~30","31~60","55~"))
+# 
+# partition.table = table(bank$age,bank$y)
+# row.sums = as.vector(rowSums(partition.table))
+# prob = partition.table / row.sums
+# mosaicplot(partition.table , shade = T, xlab = "age", ylab = "y", main = "Mosaic Plot")
 
-partition.table = table(bank$age,bank$y)
-row.sums = as.vector(rowSums(partition.table))
-prob = partition.table / row.sums
-mosaicplot(partition.table , shade = T, xlab = "age", ylab = "y", main = "Mosaic Plot")
+p<-binconti(bank, "age","y")
+plot(p)
 
 # bin for balance
 # bank <-banktemp
+p<-binconti(bank, "balance","y")
+plot(p)
 
 summary(bank$balance)
 # bank$balance <- cut(bank$balance, breaks=c(-Inf, 72,1362,1428,Inf), 
@@ -151,7 +186,8 @@ mosaicplot(partition.table , shade = T, xlab = "balance", ylab = "y", main = "Mo
 
 # bin for pday
 table(bank$pdays)  # too many nosie, skip
-
+p<-binconti(bank, "pdays","y")
+plot(p)
 # start to build tree
 # delete unrelated attribute
 MyData = subset(bank,select = -c(month,contact,duration,pdays,day,campaign,previous))
@@ -184,30 +220,41 @@ library(caret)
 # print(tree, "feature", "obsCount","purity")
  #Prune(tree, function(x) x$obsCount> 200)
 #plot(tree)
-# split y,x
-set.seed(1)
-# set fold 10
-fold = 10
-idx <- createFolds(c(1:dim(MyTrain)[1]), k=fold)
-error <- rep(0,fold)
-# k fold
-for (i in 1:fold){
-  # split training and validation data
-  learn    <- MyTrain[-idx[[i]], ]
-  x.valid    <- MyTrain[idx[[i]], ]
-  y.valid    <- MyTrain[idx[[i]], ]
-  # traning
-  bankNode = rootNode(bank)
-  tree <- Node$new(bankNode)
-  TrainID3(tree, learn,10,0.90)
-  # validation
-  result <- rep(0,nrow(x.valid))
-  for(row in 1:nrow(x.valid)){
-    result[row]  <-  Predict(tree,x.valid[row,])
+# set the sample thredhold and purity threhold
+thredhold.sample <- c(10)
+threshold.purity <- c(0.9)
+# set error matrix for recording validation error
+error.matrix <- matrix(rep(0,length(threshold.purity)*length(thredhold.sample)),
+                           nrow=length(thredhold.sample),ncol=length(threshold.purity))
+colnames(error.matrix) <- threshold.purity
+rownames(error.matrix) <- thredhold.sample
+for(s in 1:length(thredhold.sample)){
+  for(p in 1:length(threshold.purity)){
+    set.seed(1)
+    # set fold 10
+    fold = 10
+    idx <- createFolds(c(1:dim(MyTrain)[1]), k=fold)
+    error <- rep(0,fold)
+    # k fold
+    for (i in 1:fold){
+      # split training and validation datale
+      learn    <- MyTrain[-idx[[i]], ]
+      x.valid    <- MyTrain[idx[[i]], ]
+      y.valid    <- MyTrain[idx[[i]], ncol(MyTrain)]
+      # traning
+      bankNode = rootNode(bank)
+      tree <- Node$new(bankNode)
+      TrainID3(tree, learn,thredhold.sample[s],threshold.purity[p])
+      # validation
+      result <- rep(0,nrow(x.valid))
+      for(row in 1:nrow(x.valid)){
+        result[row]  <-  Predict(tree,x.valid[row,])
+      }
+      error[i] <- mean(result!=y.valid)
+    }
+    error.matrix[s,p] <- mean(error)
   }
-  error[i] <- mean(result!=y.valid)
 }
-print(error)
 # test
 # the test data is not over sampling
 MyTest.x <- MyTest[,-ncol(MyTest)]
@@ -217,6 +264,8 @@ for(row in 1:nrow(MyTest.x)){
   result.test[row]  <-  Predict(tree,MyTest.x[row,])
 }
 error.test <- mean(result.test!=MyTest.y)
+print(error.test)
+
 
 
 
