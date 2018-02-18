@@ -1,10 +1,11 @@
 
+
 # this downloads and unzips the dataset
-# temp <- tempfile()
-# download.file("http://archive.ics.uci.edu/ml/machine-learning-databases/00222/bank.zip",temp, mode="wb")
-# unzip(temp, "bank-full.csv")
-# unlink(temp)
-setwd("~/taoj@mail.gvsu.edu/gvsu/course/CIS678/Bank Marketing by Decision Tree/data/bank")
+ temp <- tempfile()
+ download.file("http://archive.ics.uci.edu/ml/machine-learning-databases/00222/bank.zip",temp, mode="wb")
+ unzip(temp, "bank-full.csv")
+ unlink(temp)
+#setwd("~/taoj@mail.gvsu.edu/gvsu/course/CIS678/Bank Marketing by Decision Tree/data/bank")
 bank <- read.table("bank-full.csv", sep=";", header=T)
 
 library(data.tree)
@@ -74,8 +75,8 @@ TrainID3 <- function(node, data, thredhold, purity) {
     child$obsCount <- nrow(data)
     child$feature <- ''
   }
-  # no attribute can be used for spliting or less then thrdhold num
-  else if(ncol(data)==1 || nrow(data)<thredhold || node$purity>purity)
+  # no attribute can be used for spliting or less then threshold num
+  else if(ncol(data)==1 | nrow(data)<thredhold | node$purity>purity)
   {
     predict <- predict.outcome(data[,ncol(data)])
     child <- node$AddChild(predict$predict)
@@ -102,7 +103,8 @@ TrainID3 <- function(node, data, thredhold, purity) {
       #construct a child having the name of that feature value
       # child <- node$AddChild(paste(feature,":",names(childObs)[i]))
       child <- node$AddChild(names(childObs)[i])
-      if(class(childObs[[i]])=="factor"){childObs[[i]] <-as.data.frame(childObs[[i]])}
+      #if(class(childObs[[i]])=="factor"){childObs[[i]] <-as.data.frame(childObs[[i]])}
+      childObs[[i]] <-as.data.frame(childObs[[i]])
       #call the algorithm recursively on the child and the subset      
       TrainID3(child, childObs[[i]], thredhold,purity)
     }
@@ -142,11 +144,7 @@ binconti <- function(df, conti.name, class.name){
     }
   }
   point <- cbind(splitpoint, gain)
-  # renturn points with maximun gain
-  # point <- point[order(point[,2],decreasing = TRUE),]
-  # return (point[1:category.num,])
   return (point)
-  
 }
 
 # start to prepare date
@@ -165,19 +163,20 @@ binconti <- function(df, conti.name, class.name){
 # prob = partition.table / row.sums
 # mosaicplot(partition.table , shade = T, xlab = "age", ylab = "y", main = "Mosaic Plot")
 
+# check for point to split continuous variables at
 p<-binconti(bank, "age","y")
 plot(p)
+bank$age = cut(bank$age, breaks=c(-Inf, 61, Inf), labels=c("<61",">=61"))
+summary(bank$age)
 
 # bin for balance
-# bank <-banktemp
 p<-binconti(bank, "balance","y")
 plot(p)
 
 summary(bank$balance)
-# bank$balance <- cut(bank$balance, breaks=c(-Inf, 72,1362,1428,Inf), 
-#                 labels=c("1","2","3","4"))
 bank$balance <- cut(bank$balance, breaks=c(-Inf, 72,Inf),
                     labels=c("<72",">=72"))
+summary(bank$balance)
 
 partition.table = table(bank$balance,bank$y)
 row.sums = as.vector(rowSums(partition.table))
@@ -188,47 +187,40 @@ mosaicplot(partition.table , shade = T, xlab = "balance", ylab = "y", main = "Mo
 table(bank$pdays)  # too many nosie, skip
 p<-binconti(bank, "pdays","y")
 plot(p)
+
 # start to build tree
+# plot correlation matrix to determine related attributes
+pairs(~y+month+contact+duration+pdays, data=bank)
+pairs(~y+day+campaign+previous, data=bank)
+
 # delete unrelated attribute
 MyData = subset(bank,select = -c(month,contact,duration,pdays,day,campaign,previous))
+
 # split to training and test data
 MyData <- MyData[sample(1:nrow(MyData)),]
 MyTest <- MyData[40001:45211,]
 MyTrain <- MyData[1:40000,]
 library(ROSE)
-# oversampling traning data
-MyTrain <- ovun.sample(y ~ ., data = MyTrain, method = "both",N = 40000, p=0.5, seed=1)$data
-# MyTrain <- ovun.sample(y ~ ., data = MyTrain, method = "under",N = 20000, seed =1)$data
-# MyTrain <- ovun.sample(y ~ ., data = MyTrain, method = "both",N = 30000,  p=0.5,seed=1)$data
-# cut train and validation data
-MyTrain <- MyTrain[sample(1:nrow(MyData)),]
-# MyValidation <- MyTrain[35000:40000,]
-# MyValidation <- MyValidation[MyValidation$y %in% c("yes","no"),]
-# MyTrain <-MyTrain[1:35000,]
-MyTrain <- MyTrain[MyTrain$y %in% c("yes","no"),]
 
-# class example for checking against a known calculation
-wind = c('strong','weak','strong','strong','strong','weak','weak','strong','strong','strong','weak','weak','strong','weak')
-water = c('warm','warm','warm','moderate','cold','cold','cold','moderate','cold','moderate','moderate','moderate','warm','moderate')
-air = c('warm','warm','warm','warm','cool','cool','cool','warm','cool','cool','cool','warm','cool','warm')
-forecast = c('sunny','sunny','cloudy','rainy','rainy','rainy','sunny','sunny','sunny','rainy','sunny','sunny','sunny','rainy')
-oracle = c('yes','no','yes','yes','no','no','no','yes','yes','no','yes','yes','yes','no')
-example = data.frame(wind, water, air, forecast, oracle)
+# oversampling training data
+MyTrain <- ovun.sample(y ~ ., data = MyTrain, method = "both",N = 40000, p=0.5, seed=1)$data
+
+MyTrain <- MyTrain[sample(1:nrow(MyData)),]
+
+MyTrain <- MyTrain[MyTrain$y %in% c("yes","no"),]
 
 # cross-validation
 library(caret)
-# print(tree, "feature", "obsCount","purity")
- #Prune(tree, function(x) x$obsCount> 200)
-#plot(tree)
+
 # set the sample thredhold and purity threhold
-thredhold.sample <- c(10)
+threshold.sample <- c(7000)
 threshold.purity <- c(0.9)
 # set error matrix for recording validation error
-error.matrix <- matrix(rep(0,length(threshold.purity)*length(thredhold.sample)),
-                           nrow=length(thredhold.sample),ncol=length(threshold.purity))
+error.matrix <- matrix(rep(0,length(threshold.purity)*length(threshold.sample)),
+                           nrow=length(threshold.sample),ncol=length(threshold.purity))
 colnames(error.matrix) <- threshold.purity
-rownames(error.matrix) <- thredhold.sample
-for(s in 1:length(thredhold.sample)){
+rownames(error.matrix) <- threshold.sample
+for(s in 1:length(threshold.sample)){
   for(p in 1:length(threshold.purity)){
     set.seed(1)
     # set fold 10
@@ -244,7 +236,7 @@ for(s in 1:length(thredhold.sample)){
       # traning
       bankNode = rootNode(bank)
       tree <- Node$new(bankNode)
-      TrainID3(tree, learn,thredhold.sample[s],threshold.purity[p])
+      TrainID3(tree, learn,threshold.sample[s],threshold.purity[p])
       # validation
       result <- rep(0,nrow(x.valid))
       for(row in 1:nrow(x.valid)){
@@ -255,6 +247,8 @@ for(s in 1:length(thredhold.sample)){
     error.matrix[s,p] <- mean(error)
   }
 }
+plot(tree)
+
 # test
 # the test data is not over sampling
 MyTest.x <- MyTest[,-ncol(MyTest)]
@@ -265,10 +259,5 @@ for(row in 1:nrow(MyTest.x)){
 }
 error.test <- mean(result.test!=MyTest.y)
 print(error.test)
-
-
-
-
-
 
 
