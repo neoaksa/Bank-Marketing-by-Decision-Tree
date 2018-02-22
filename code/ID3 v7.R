@@ -1,19 +1,10 @@
-<<<<<<< Updated upstream
 
-# this downloads and unzips the dataset
- temp <- tempfile()
- download.file("http://archive.ics.uci.edu/ml/machine-learning-databases/00222/bank.zip",temp, mode="wb")
- unzip(temp, "bank-full.csv")
- unlink(temp)
-#setwd("~/taoj@mail.gvsu.edu/gvsu/course/CIS678/Bank Marketing by Decision Tree/data/bank")
-=======
 # this downloads and unzips the dataset
 # temp <- tempfile()
 # download.file("http://archive.ics.uci.edu/ml/machine-learning-databases/00222/bank.zip",temp, mode="wb")
 # unzip(temp, "bank-full.csv")
 # unlink(temp)
 setwd("~/taoj@mail.gvsu.edu/gvsu/course/CIS678/Bank Marketing by Decision Tree/data/bank")
->>>>>>> Stashed changes
 bank <- read.table("bank-full.csv", sep=";", header=T)
 
 library(data.tree)
@@ -92,24 +83,13 @@ TrainID3 <- function(node, data, thredhold, purity) {
     node$feature <- tail(names(data), 1)
     child$obsCount <- nrow(data)
     child$feature <- ''
-<<<<<<< Updated upstream
-
-=======
-    
->>>>>>> Stashed changes
   }
   else {
     #choose the feature with the highest information gain
     ig <- sapply(colnames(data)[-ncol(data)], 
-<<<<<<< Updated upstream
-                    function(x) InformationGain(
-                      table(data[,x], data[,ncol(data)])
-                    )
-=======
                  function(x) InformationGain(
                    table(data[,x], data[,ncol(data)])
                  )
->>>>>>> Stashed changes
     )
     feature <- names(ig)[ig == max(ig)][1]
     
@@ -231,15 +211,11 @@ MyTrain <- MyTrain[MyTrain$y %in% c("yes","no"),]
 library(caret)
 
 # set the sample thredhold and purity threhold
-threshold.sample <- c(2000)
+threshold.sample <- c(100,1000,1500,2000,2500,5000,7000,10000,20000,30000,40000)
 threshold.purity <- c(0.9)
 # set error matrix for recording validation error
 error.matrix <- matrix(rep(0,length(threshold.purity)*length(threshold.sample)),
-<<<<<<< Updated upstream
-                           nrow=length(threshold.sample),ncol=length(threshold.purity))
-=======
                        nrow=length(threshold.sample),ncol=length(threshold.purity))
->>>>>>> Stashed changes
 colnames(error.matrix) <- threshold.purity
 rownames(error.matrix) <- threshold.sample
 for(s in 1:length(threshold.sample)){
@@ -269,7 +245,6 @@ for(s in 1:length(threshold.sample)){
     error.matrix[s,p] <- mean(error)
   }
 }
-#View(error.matrix)
 plot(tree)
 
 # test
@@ -290,8 +265,6 @@ thresh.sample = c(100,1000,1500,2000,2500,5000,7000,10000,20000,30000,40000)
 validation.error = c(.9914,.7640,.3451,.3017,.3532,.3282,.3280,.3706,.3885,.3996,.4979)
 errordf = data.frame(thresh.sample, validation.error)
 
-<<<<<<< Updated upstream
+
 ggplot(data=errordf, aes(x=thresh.sample, y=validation.error)) + geom_line() + geom_point()
-=======
-ggplot(data=errordf, aes(x=thresh.sample, y=validation.error)) + geom_line() + geom_point()
->>>>>>> Stashed changes
+
