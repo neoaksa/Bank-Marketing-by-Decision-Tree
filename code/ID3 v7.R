@@ -232,7 +232,7 @@ for(s in 1:length(threshold.sample)){
       x.valid    <- MyTrain[idx[[i]], ]
       y.valid    <- MyTrain[idx[[i]], ncol(MyTrain)]
       # traning
-      bankNode = rootNode(bank)
+      bankNode = rootNode(MyData)
       tree <- Node$new(bankNode)
       TrainID3(tree, learn,threshold.sample[s],threshold.purity[p])
       # validation
