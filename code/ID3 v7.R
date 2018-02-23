@@ -1,10 +1,10 @@
 
 # this downloads and unzips the dataset
-# temp <- tempfile()
-# download.file("http://archive.ics.uci.edu/ml/machine-learning-databases/00222/bank.zip",temp, mode="wb")
-# unzip(temp, "bank-full.csv")
-# unlink(temp)
-setwd("~/taoj@mail.gvsu.edu/gvsu/course/CIS678/Bank Marketing by Decision Tree/data/bank")
+temp <- tempfile()
+download.file("http://archive.ics.uci.edu/ml/machine-learning-databases/00222/bank.zip",temp, mode="wb")
+unzip(temp, "bank-full.csv")
+unlink(temp)
+# setwd("~/taoj@mail.gvsu.edu/gvsu/course/CIS678/Bank Marketing by Decision Tree/data/bank")
 bank <- read.table("bank-full.csv", sep=";", header=T)
 
 library(data.tree)
@@ -115,7 +115,7 @@ Predict <- function(tree, features) {
     return (tree$children[[1]]$name)}
   child <- tree$children[[as.character(features[tree$feature][[1]])]]
   if(is.null(child)){
-    return ("unknow")}
+    return ("no")}
   return ( Predict(child, features))
 }
 
@@ -211,13 +211,17 @@ MyTrain <- MyTrain[MyTrain$y %in% c("yes","no"),]
 library(caret)
 
 # set the sample thredhold and purity threhold
-threshold.sample <- c(100,1000,1500,2000,2500,5000,7000,10000,20000,30000,40000)
-threshold.purity <- c(0.9)
+threshold.sample <- c(10,100,500,1000,2000,5000)
+threshold.purity <- c(0.7,0.8,0.9,0.95)
 # set error matrix for recording validation error
 error.matrix <- matrix(rep(0,length(threshold.purity)*length(threshold.sample)),
                        nrow=length(threshold.sample),ncol=length(threshold.purity))
+f1.matrix <- matrix(rep(0,length(threshold.purity)*length(threshold.sample)),
+                       nrow=length(threshold.sample),ncol=length(threshold.purity))
 colnames(error.matrix) <- threshold.purity
 rownames(error.matrix) <- threshold.sample
+colnames(f1.matrix) <- threshold.purity
+rownames(f1.matrix) <- threshold.sample
 for(s in 1:length(threshold.sample)){
   for(p in 1:length(threshold.purity)){
     set.seed(1)
@@ -225,6 +229,7 @@ for(s in 1:length(threshold.sample)){
     fold = 10
     idx <- createFolds(c(1:dim(MyTrain)[1]), k=fold)
     error <- rep(0,fold)
+    f1 <- rep(0,fold)
     # k fold
     for (i in 1:fold){
       # split training and validation datale
@@ -241,21 +246,28 @@ for(s in 1:length(threshold.sample)){
         result[row]  <-  Predict(tree,x.valid[row,])
       }
       error[i] <- mean(result!=y.valid)
+      cm <- confusionMatrix(data = result, reference = y.valid, positive = "yes",mode = "prec_recall")
+      f1[i] <- cm$byClass[["F1"]]
     }
     error.matrix[s,p] <- mean(error)
+    f1.matrix[s,p] <- mean(f1)
   }
 }
-plot(tree)
+max(f1.matrix)
 
 # test
 # the test data is not over sampling
+bankNode = rootNode(MyData)
+tree <- Node$new(bankNode)
+TrainID3(tree,MyTrain,10,0.9) # thresholds are picked up by cross validation
+
 MyTest.x <- MyTest[,-ncol(MyTest)]
 MyTest.y <- MyTest[,ncol(MyTest)]
 result.test <- rep(0,nrow(MyTest.x))
 for(row in 1:nrow(MyTest.x)){
-  result.test[row]  <-  Predict(tree,MyTest.x[row,])
+  result[row]  <-  Predict(tree,MyTest.x[row,])
 }
-error.test <- mean(result.test!=MyTest.y)
+confusionMatrix(data = result, reference = MyTest.y, positive = "yes",mode = "prec_recall")
 print(error.test)
 
 
@@ -268,3 +280,17 @@ errordf = data.frame(thresh.sample, validation.error)
 
 ggplot(data=errordf, aes(x=thresh.sample, y=validation.error)) + geom_line() + geom_point()
 
+# randomForest
+library(randomForest)
+## Run the RANDOM FOREST EXAMPLE
+x.learn <- MyData[1:30000,-ncol(MyData)]
+y.learn <- MyData[1:30000,ncol(MyData)]
+x.test <- MyData[1:10000,-ncol(MyTest)]
+y.test <- MyData[1:10000,ncol(MyTest)]
+bank.rf = randomForest(x.learn, y.learn, x.test,y.test, keep.forest = TRUE) 
+round(importance(bank.rf),2)
+## Plot all errors
+plot(bank.rf)
+
+bank.pred <- predict(bank.rf, MyTest.x)
+confusionMatrix(bank.pred,reference = MyTest.y, positive = "yes",mode = "prec_recall")
