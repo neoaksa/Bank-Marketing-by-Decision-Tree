@@ -99,8 +99,8 @@ TrainID3 <- function(node, data, thredhold, purity) {
     childObs <- split(data[,!(names(data) %in% feature)], data[,feature], drop = TRUE)
     for(i in 1:length(childObs)) {
       #construct a child having the name of that feature value
-      # child <- node$AddChild(paste(feature,":",names(childObs)[i]))
-      child <- node$AddChild(names(childObs)[i])
+      child <- node$AddChild(paste(feature,":",names(childObs)[i]))
+      # child <- node$AddChild(names(childObs)[i])
       #if(class(childObs[[i]])=="factor"){childObs[[i]] <-as.data.frame(childObs[[i]])}
       childObs[[i]] <-as.data.frame(childObs[[i]])
       #call the algorithm recursively on the child and the subset      
@@ -113,7 +113,7 @@ TrainID3 <- function(node, data, thredhold, purity) {
 Predict <- function(tree, features) {
   if (tree$children[[1]]$isLeaf) {
     return (tree$children[[1]]$name)}
-  child <- tree$children[[as.character(features[tree$feature][[1]])]]
+  child <- tree$children[[paste(tree$feature,":",as.character(features[tree$feature][[1]]))]]
   if(is.null(child)){
     return ("no")}
   return ( Predict(child, features))
@@ -192,7 +192,7 @@ pairs(~y+month+contact+duration+pdays, data=bank)
 pairs(~y+day+campaign+previous, data=bank)
 
 # delete unrelated attribute
-MyData = subset(bank,select = -c(month,contact,duration,pdays,day,campaign,previous))
+MyData = subset(bank,select = -c(month,contact,duration,pdays,day,campaign,previous,job))
 
 # split to training and test data
 MyData <- MyData[sample(1:nrow(MyData)),]
@@ -261,14 +261,18 @@ bankNode = rootNode(MyData)
 tree <- Node$new(bankNode)
 TrainID3(tree,MyTrain,10,0.9) # thresholds are picked up by cross validation
 
+#plot with networkD3
+useRtreeList <- ToListExplicit(tree, unname = TRUE)
+radialNetwork( useRtreeList)
+
 MyTest.x <- MyTest[,-ncol(MyTest)]
 MyTest.y <- MyTest[,ncol(MyTest)]
 result.test <- rep(0,nrow(MyTest.x))
 for(row in 1:nrow(MyTest.x)){
-  result[row]  <-  Predict(tree,MyTest.x[row,])
+  result.test[row]  <-  Predict(tree,MyTest.x[row,])
 }
-confusionMatrix(data = result, reference = MyTest.y, positive = "yes",mode = "prec_recall")
-print(error.test)
+confusionMatrix(data = result.test, reference = MyTest.y, positive = "yes",mode = "prec_recall")
+
 
 
 # plot errors
@@ -280,13 +284,14 @@ errordf = data.frame(thresh.sample, validation.error)
 
 ggplot(data=errordf, aes(x=thresh.sample, y=validation.error)) + geom_line() + geom_point()
 
+
 # randomForest
 library(randomForest)
 ## Run the RANDOM FOREST EXAMPLE
 x.learn <- MyData[1:30000,-ncol(MyData)]
 y.learn <- MyData[1:30000,ncol(MyData)]
-x.test <- MyData[1:10000,-ncol(MyTest)]
-y.test <- MyData[1:10000,ncol(MyTest)]
+x.test <- MyData[30001:40000,-ncol(MyData)]
+y.test <- MyData[30001:40000,ncol(MyData)]
 bank.rf = randomForest(x.learn, y.learn, x.test,y.test, keep.forest = TRUE) 
 round(importance(bank.rf),2)
 ## Plot all errors

@@ -1,10 +1,10 @@
-# setwd("~/Google Drive/gvsu/course/CIS678/Bank Marketing by Decision Tree/data/bank")
-setwd("~/taoj@mail.gvsu.edu/gvsu/course/CIS678/Bank Marketing by Decision Tree/data/bank")
+ setwd("~/Google Drive/gvsu/course/CIS678/Bank Marketing by Decision Tree/data/bank")
+#setwd("~/taoj@mail.gvsu.edu/gvsu/course/CIS678/Bank Marketing by Decision Tree/data/bank")
 # Read CSV into R
 MyData <- read.csv(file="bank-full.csv", header=TRUE, sep=";")
 table(MyData$y)
 # delete month
-MyData = subset(MyData,select = -c(month,contact,duration,pdays))
+MyData = subset(MyData,select = -c(month,contact,duration,pdays,day,campaign,previous))
 # shuffle data
 MyData <- MyData[sample(1:nrow(MyData)),]
 # test data
