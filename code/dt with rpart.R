@@ -18,22 +18,22 @@ MyTrain <- ovun.sample(y ~ ., data = MyTrain, method = "under",N = 20000, seed =
 # shuffle data
 MyTrain <- MyTrain[sample(1:nrow(MyTrain)),]
 library(C50)
-x <- MyTrain[,1:12]
-y <- MyTrain[,13]
+x <- MyTrain[,1:9]
+y <- MyTrain[,10]
 table(y)
 
 MyValidation <- ovun.sample(y ~ ., data = MyValidation, method = "both",N = 10000, p=0.5,seed=1)$data
 # shuffle data
 MyValidation <- MyData[sample(1:nrow(MyValidation)),]
 
-testx <- MyValidation[,1:12]
-testy <- MyValidation[,13]
+testx <- MyValidation[,1:9]
+testy <- MyValidation[,10]
 
 table(testy)
 
 # grow tree†œ
 fit <- C5.0(x,y, control = C5.0Control(earlyStopping = TRUE, minCases = 10))
-
+plot(fit)
 # printcp(fit) # display the results
 # plotcp(fit) # visualize cross-validation results
 summary(fit) # detailed summary of splits
